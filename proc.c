@@ -416,7 +416,7 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     
-if(SCHEDFLAG == 1){ // rr policy with quanta
+if(strategy == 1){ // rr policy with quanta
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
@@ -433,7 +433,7 @@ if(SCHEDFLAG == 1){ // rr policy with quanta
    	 }
     }
 	
-else if (SCHEDFLAG == 2){	//fifio RR policy
+else if (strategy == 2){	//fifio RR policy
 	
 	 
 	uint tmp=ticks;
@@ -466,7 +466,7 @@ else if (SCHEDFLAG == 2){	//fifio RR policy
 	
      
     }
-	else if(SCHEDFLAG == 3){   //guaranteed
+	else if(strategy == 3){   //guaranteed
 
  	uint min = ticks;
    	uint min2= min;
@@ -498,7 +498,7 @@ else if (SCHEDFLAG == 2){	//fifio RR policy
 	
     }
 
-	else if (SCHEDFLAG ==4 ){	//multy level queue
+	else if (strategy ==4 ){	//multy level queue
 
 	//first queue
 		
@@ -602,7 +602,7 @@ sched(void)
     panic("sched interruptible");
   intena = cpu->intena;
 
-	if(SCHEDFLAG==2){
+	if(strategy==2){
 
 	struct proc *p;
 	int size=0;
