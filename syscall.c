@@ -101,6 +101,8 @@ extern int sys_uptime(void);
 extern int sys_getppid(void);
 extern int sys_nice(void);
 extern int sys_wait2(void);
+extern int sys_setcid(void);
+extern int sys_wait3(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -127,6 +129,8 @@ static int (*syscalls[])(void) = {
 [SYS_getppid] sys_getppid,
 [SYS_nice] sys_nice,
 [SYS_wait2] sys_wait2,
+[SYS_setcid] sys_setcid,
+[SYS_wait3] sys_wait3,
 };
 
 void

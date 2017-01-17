@@ -175,7 +175,10 @@ UPROGS=\
 	_zombie\
 	_parent\
 	_RRsanity\
-	
+	_Gsanity\
+	_sanity\
+	_frrTest\
+
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
 

@@ -51,11 +51,18 @@ allocproc(void)
   return 0;
 
 found:
+
+  p->q3rtime=-1;
+  p->q3tatime=-1;
+  p->q2tatime=-1;
+  p->q2rtime=-1;
+  
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->ctime= ticks;
   p->rtime=0;
   p->GRT=0;
+  p->cid=0;
   p->myquantum = 0;
   p->queuelevel = 3;
   p->priority=ticks;
@@ -83,6 +90,7 @@ found:
   p->context->eip = (uint)forkret;
 
   return p;
+
 }
 
 int wait22 (char *wtime, char *rtime )
@@ -132,6 +140,66 @@ int wait22 (char *wtime, char *rtime )
 
   }
 }
+
+
+int wait33 (char *wtime, char *rtime , char *cid ,char *q3rtime , char *q3tatime , char *q2rtime , char *q2tatime )
+{
+  struct proc *p;
+  int havekids, pid;
+
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for zombie children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent != proc)
+        continue;
+      havekids = 1;
+      if(p->state == ZOMBIE){
+        // Found one.
+
+        // Added time field update, else same from wait system call
+       
+	*wtime = p->etime - p->ctime - p->rtime ;
+        *rtime = p->rtime;
+	*cid= p->cid;
+	*q3rtime = p->q3rtime;
+	*q3tatime = p->q3tatime;
+	*q2rtime =p->q2rtime;
+	*q2tatime =p->q2tatime;
+
+cprintf("proc: proc->q3rtime:  %d  &&   proc->q3tatime: %d  \n",p->q3rtime ,p->q3tatime);
+
+cprintf("proc: proc->q2rtime:  %d  &&   proc->q2tatime: %d  \n",p->q2rtime ,p->q2tatime);
+        // same as wait 
+        pid = p->pid;
+        kfree(p->kstack);
+        p->kstack = 0;
+        freevm(p->pgdir);
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    // No point waiting if we don't have any children.
+    if(!havekids || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+    sleep(proc, &ptable.lock);  //DOC: wait-sleep
+
+  }
+}
+
+
+
 void
 userinit(void)
 {
@@ -280,7 +348,7 @@ exit(void)
   
   proc->state = ZOMBIE;
   proc->etime= ticks;  
-  cprintf("etime :D %d\n", proc->etime);
+  //cprintf("etime :D %d\n", proc->etime);
   sched();
   panic("zombie exit");
 }
@@ -348,7 +416,7 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     
-if(SCHEDFLAG == 1){ // rr policy 
+if(SCHEDFLAG == 1){ // rr policy with quanta
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
@@ -365,16 +433,16 @@ if(SCHEDFLAG == 1){ // rr policy
    	 }
     }
 	
-else if (SCHEDFLAG == 2){	
+else if (SCHEDFLAG == 2){	//fifio RR policy
 	
-	 // rr policy 
+	 
 	uint tmp=ticks;
 	uint tmp2=tmp;
 
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-	//cprintf("pid : %d  , ", p->pid);
+
       if((p->priority) < tmp){
 	proc = p;
 	tmp=proc->priority;
@@ -390,7 +458,6 @@ else if (SCHEDFLAG == 2){
 	proc->state = RUNNING;
 	swtch(&cpu->scheduler, proc->context);
 	switchkvm();
-	//cprintf("\n");
 	
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -399,7 +466,7 @@ else if (SCHEDFLAG == 2){
 	
      
     }
-	else if(SCHEDFLAG == 3){ 
+	else if(SCHEDFLAG == 3){   //guaranteed
 
  	uint min = ticks;
    	uint min2= min;
@@ -407,8 +474,9 @@ else if (SCHEDFLAG == 2){
       		if(p->state != RUNNABLE)
        		 continue;
 	if((ticks-(p->ctime)) != 0)
-	p->GRT= (p->rtime)/(ticks-(p->ctime));
+		p->GRT= (p->rtime)/(ticks-(p->ctime));
 	else p->GRT=0;
+
 	if((p->GRT) < min){
 		proc = p;
 		min = proc->GRT;
@@ -430,7 +498,7 @@ else if (SCHEDFLAG == 2){
 	
     }
 
-	else if (SCHEDFLAG ==4 ){
+	else if (SCHEDFLAG ==4 ){	//multy level queue
 
 	//first queue
 		
@@ -518,6 +586,7 @@ else if (SCHEDFLAG == 2){
 // be proc->intena and proc->ncli, but that would
 // break in the few places where a lock is held but
 // there's no process.
+
 void
 sched(void)
 {
@@ -533,11 +602,12 @@ sched(void)
     panic("sched interruptible");
   intena = cpu->intena;
 
-/*	struct proc *p;
+	if(SCHEDFLAG==2){
+
+	struct proc *p;
 	int size=0;
 	uint number [NPROC] ;
-	int pid [NPROC];
-	
+	int pid [NPROC];	
 	int a1;
 	uint a ;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -566,10 +636,13 @@ sched(void)
             }
         }
     }
-
+//cprintf("current proc is: %d  this is queue: \n", proc->pid);
 	for(int i =0 ; i<size ; i++)
-		cprintf("%d:%d , ", i, pid[i]);
-*/
+		cprintf("<%d:%d>, ", i, pid[i]);
+	cprintf("\n");
+
+	}
+
   swtch(&proc->context, cpu->scheduler);	
   cpu->intena = intena;
 

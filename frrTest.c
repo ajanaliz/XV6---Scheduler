@@ -14,9 +14,9 @@ int main(void) {
            printf(1, "fork failed\n");
             exit();
         } else if (childPid[i] == 0) {
-            int pid = getpid();
-            for (int j = 0; j < 10; j++) {
-                printf(1, "Child %d prints for the %d time\n", pid, j);
+            
+            for (int j = 0; j < 1000; j++) {
+               ;
             }
             exit();
         } else if (childPid[i] > 0) {
@@ -30,8 +30,6 @@ int main(void) {
 
         wait2(&wtime, &rtime);
 
-        printf(1, "child %d : ", i);
-        printf(1, "wtime : %d , rtime : %d , turnaround time : %d\n\n", wtime, rtime, wtime + rtime);
     }
     exit();
 }

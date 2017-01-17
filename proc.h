@@ -58,6 +58,14 @@ struct proc {
   uint etime;
   uint rtime;
   uint GRT;
+  int cid;
+
+  uint q3rtime;
+  uint q3tatime;
+
+  uint q2rtime;
+  uint q2tatime;
+
   uint priority;
   int  queuelevel;
   uint myquantum;
